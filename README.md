@@ -1,6 +1,6 @@
 # Java Order Book Implementations
 
-This repository explores multiple **single-threaded, in-memory Order Book** implementations in Java.
+This repository explores **single-threaded, in-memory Order Book** implementations in Java.
 
 ---
 
