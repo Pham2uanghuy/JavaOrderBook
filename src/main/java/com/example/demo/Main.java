@@ -1,8 +1,8 @@
 package com.example.demo;
 
+import com.example.demo.core.MatchingEngine;
 import com.example.demo.core.Order;
 import com.example.demo.core.OrderBook;
-import com.example.demo.core.MatchingEngine;
 
 public class Main {
 
