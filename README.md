@@ -18,11 +18,11 @@ An **Order Book** is a real-time ledger of all outstanding buy and sell orders f
 
 #### Data Structures
 
-- **Price Levels** → `NavigableMap<Long, List<PrimitiveOrder>>`  
+- **Price Levels** → `NavigableMap<Long, PriceLevel>`  
   - Key: Price level  
   - Value: FIFO list of orders at that price  
 
-- **Order Lookup** → `Map<Long, PrimitiveOrder>`  
+- **Order Lookup** → `Map<Long, Order>`  
   - Key: `orderId`  
   - Value: Order reference (for O(1) cancellation & modification)
 
