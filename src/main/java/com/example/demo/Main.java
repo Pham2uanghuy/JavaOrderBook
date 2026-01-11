@@ -2,8 +2,7 @@ package com.example.demo;
 
 import com.example.demo.core.Order;
 import com.example.demo.core.OrderBook;
-import com.example.demo.core.impl.SimpleOrderBook;
-import com.example.demo.engine.MatchingEngine;
+import com.example.demo.core.MatchingEngine;
 
 public class Main {
 
@@ -11,7 +10,7 @@ public class Main {
         final int TOTAL_ORDERS = 1_000_000;
         final long PRICE = 100;
 
-        OrderBook orderBook = new SimpleOrderBook();
+        OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
         long startSetup = System.nanoTime();
@@ -20,7 +19,7 @@ public class Main {
         for (int i = 0; i < TOTAL_ORDERS; i++) {
             Order sell = new Order(
                     i,
-                    1,
+                    (byte) 1,
                     PRICE,
                     1,
                     Order.SIDE_SELL,
@@ -37,7 +36,7 @@ public class Main {
         for (int i = 0; i < TOTAL_ORDERS; i++) {
             Order buy = new Order(
                     TOTAL_ORDERS + i,
-                    1,
+                    (byte) 1,
                     PRICE,
                     1,
                     Order.SIDE_BUY,
