@@ -1,69 +1,69 @@
 package com.example.demo.core;
 
-import java.util.*;
+import java.util.BitSet;
 
+public class OrderBook {
+    final PriceLevel[] bids;
+    final PriceLevel[] asks;
 
-public final class OrderBook {
+    final BitSet bidBits;
+    final BitSet askBits;
+    final PriceLadderConfig cfg;
+    int bestBid = -1;
+    int bestAsk = -1;
 
-    // BUY: high -> low, SELL: low -> high
-    private final NavigableMap<Long, PriceLevel> bidLevels = new TreeMap<>(Comparator.reverseOrder());
-
-    private final NavigableMap<Long, PriceLevel> askLevels = new TreeMap<>();
-
-    // orderId -> Order (O(1) cancel / lookup)
-    private final Map<Long, Order> ordersById = new HashMap<>();
+    public OrderBook(PriceLevel[] bids, PriceLevel[] asks, BitSet bidBits, BitSet askBits, PriceLadderConfig cfg) {
+        this.bids = bids;
+        this.asks = asks;
+        this.bidBits = bidBits;
+        this.askBits = askBits;
+        this.cfg = cfg;
+    }
 
     public void addOrder(Order order) {
-        NavigableMap<Long, PriceLevel> book =
-                order.side == Order.SIDE_BUY ? bidLevels : askLevels;
+        int idx = cfg.toIndex(order.priceIndex);
 
-        PriceLevel level = book.computeIfAbsent(order.price, p -> new PriceLevel());
+        PriceLevel[] book = order.side == Order.SIDE_BUY ? bids : asks;
+        BitSet bits = order.side == Order.SIDE_BUY ? bidBits : askBits;
+
+        PriceLevel level = book[idx];
+        if (level == null) {
+            level = new PriceLevel();
+            book[idx] = level;
+            bits.set(idx);
+
+            if (order.side == Order.SIDE_BUY) {
+                bestBid = Math.max(bestBid, idx);
+            } else {
+                bestAsk = (bestAsk == -1 || idx < bestAsk) ? idx : bestAsk;
+            }
+        }
 
         level.addLast(order);
-        ordersById.put(order.id, order);
     }
 
-    public void removeOrder(Order order) {
-        NavigableMap<Long, PriceLevel> book =
-                order.side == Order.SIDE_BUY ? bidLevels : askLevels;
-
-        PriceLevel level = book.get(order.price);
-        if (level == null) {
-            return;
+    private void removeLevel(boolean isBuy, int idx) {
+        if (isBuy) {
+            bidBits.clear(idx);
+            if (idx == bestBid) {
+                bestBid = bidBits.previousSetBit(idx - 1);
+            }
+        } else {
+            askBits.clear(idx);
+            if (idx == bestAsk) {
+                bestAsk = askBits.nextSetBit(idx + 1);
+            }
         }
-
-        level.remove(order);
-
-        if (level.isEmpty()) {
-            book.remove(order.price);
-        }
-
-        ordersById.remove(order.id);
-    }
-
-    public Iterator<Map.Entry<Long, PriceLevel>> getBidLevelsIterator() {
-        return bidLevels.entrySet().iterator();
     }
 
 
-    public Iterator<Map.Entry<Long, PriceLevel>> getAskLevelsIterator() {
-        return askLevels.entrySet().iterator();
+    public void removeAskLevel(int idx) {
+        asks[idx] = null;
+        removeLevel(false, idx);
     }
 
-
-    public Order getOrderDetail(long orderId) {
-        return ordersById.get(orderId);
-    }
-
-
-    public void removeOrderFromLookupMap(long orderId) {
-        ordersById.remove(orderId);
-    }
-
-
-    public void clear() {
-        bidLevels.clear();
-        askLevels.clear();
-        ordersById.clear();
+    public void removeBidLevel(int idx) {
+        bids[idx] = null;
+        removeLevel(true, idx);
     }
 }

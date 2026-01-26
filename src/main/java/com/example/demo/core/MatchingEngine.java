@@ -1,14 +1,12 @@
 package com.example.demo.core;
 
-import java.util.Iterator;
-import java.util.Map;
 
 public final class MatchingEngine {
 
-    private final OrderBook orderBook;
+    private final OrderBook book;
 
-    public MatchingEngine(OrderBook orderBook) {
-        this.orderBook = orderBook;
+    public MatchingEngine(OrderBook book) {
+        this.book = book;
     }
 
     public void handleNewOrder(Order aggressor) {
@@ -18,72 +16,69 @@ public final class MatchingEngine {
             matchSell(aggressor);
         }
 
+        // còn dư thì vào book
         if (aggressor.remainingQty > 0) {
-            orderBook.addOrder(aggressor);
+            book.addOrder(aggressor);
         }
     }
 
-    /* BUY */
+    /* ================= BUY ================= */
 
     private void matchBuy(Order buy) {
-        Iterator<Map.Entry<Long, PriceLevel>> askIter = orderBook.getAskLevelsIterator();
+        int ask = book.bestAsk;
 
-        while (buy.remainingQty > 0 && askIter.hasNext()) {
-            Map.Entry<Long, PriceLevel> entry = askIter.next();
-            long askPrice = entry.getKey();
+        while (ask != -1
+                && ask <= buy.priceIndex
+                && buy.remainingQty > 0) {
 
-            if (askPrice > buy.price) {
-                break;
-            }
-
-            PriceLevel level = entry.getValue();
+            PriceLevel level = book.asks[ask];
             matchLevel(buy, level);
 
             if (level.isEmpty()) {
-                askIter.remove();
+                book.removeAskLevel(ask);
+                ask = book.bestAsk;
+            } else {
+                break;
             }
         }
     }
 
-    /* SELL */
+    /* ================= SELL ================= */
 
     private void matchSell(Order sell) {
-        Iterator<Map.Entry<Long, PriceLevel>> bidIter = orderBook.getBidLevelsIterator();
+        int bid = book.bestBid;
 
-        while (sell.remainingQty > 0 && bidIter.hasNext()) {
-            Map.Entry<Long, PriceLevel> entry = bidIter.next();
-            long bidPrice = entry.getKey();
+        while (bid != -1
+                && bid >= sell.priceIndex
+                && sell.remainingQty > 0) {
 
-            if (bidPrice < sell.price) {
-                break;
-            }
-
-            PriceLevel level = entry.getValue();
+            PriceLevel level = book.bids[bid];
             matchLevel(sell, level);
 
             if (level.isEmpty()) {
-                bidIter.remove();
+                book.removeBidLevel(bid);
+                bid = book.bestBid;
+            } else {
+                break;
             }
         }
     }
 
-    /* CORE MATCH */
+    /* ================= CORE MATCH ================= */
 
     private void matchLevel(Order aggressor, PriceLevel level) {
-
         Order resting = level.head;
 
         while (resting != null && aggressor.remainingQty > 0) {
-            long tradeQty = Math.min(aggressor.remainingQty, resting.remainingQty);
+            long traded = Math.min(aggressor.remainingQty, resting.remainingQty);
 
-            aggressor.remainingQty = aggressor.remainingQty - tradeQty;
-            resting.remainingQty = resting.remainingQty - tradeQty;
+            aggressor.remainingQty -= traded;
+            resting.remainingQty -= traded;
 
             Order next = resting.next;
 
             if (resting.remainingQty == 0) {
                 level.remove(resting);
-                orderBook.removeOrderFromLookupMap(resting.id);
             }
 
             resting = next;
